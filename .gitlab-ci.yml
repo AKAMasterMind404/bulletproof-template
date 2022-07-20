@@ -1,0 +1,102 @@
+stages:
+  - build
+  - deploy
+variables:
+  DEPLOY_REPO: prod8/argoyaml.git
+  DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA
+  LATEST_IMAGE: $CI_REGISTRY_IMAGE:latest
+
+build_stg:
+  image: docker:latest
+  stage: build
+  # tags:
+  #   - studio
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY  
+  script:
+    - docker build -t "${DOCKER_IMAGE_NAME}" .
+    - docker push "${DOCKER_IMAGE_NAME}"
+  when: manual
+
+# build_prod:
+#   image: docker:latest
+#   stage: build
+#   # tags:
+#   #   - studio
+#   services:
+#     - docker:dind
+#   before_script:
+#     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+#   script:
+#     - docker build -f deploy/Dockerfile.prod -t "${DOCKER_IMAGE_NAME}-prod" .
+#     - docker push "${DOCKER_IMAGE_NAME}-prod"
+
+#   when: manual
+#   only:
+#     - main
+
+deploy_stg:
+  stage: deploy
+  # tags:
+  #   - studio
+  needs: [build_stg]
+  allow_failure: true
+  image:
+    name: bitnami/git:2.30.1
+    entrypoint: [""]
+  before_script:
+    - mkdir argoclone && cd argoclone
+    - mkdir ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - chmod 0400 ~/.ssh/id_rsa
+    - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+    - ssh-agent bash -c 'git clone git@gitlab.com:${DEPLOY_REPO}'
+    #- git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/${DEPLOY_REPO}
+    - cd argoyaml && git checkout master
+    - git config --global user.name ${WAJ_USER}
+    - git config --global user.email ${WAJ_USER}
+  script:
+    - sed 's/PLACEHOLDERENV/stg/g' ../../k8.yml > ./kongstaging/stg/notification/notification-stg.yml
+    - sed -i 's/REPLICAS/1/g' ./kongstaging/stg/notification/notification-stg.yml
+    - sed -i "s/PLACEHOLDERIMG/$CI_COMMIT_REF_SLUG-${CI_COMMIT_SHORT_SHA}/g"  ./kongstaging/stg/notification/notification-stg.yml
+    - sed -i "s/PLACEHOLDERREGISTRY/${CI_REGISTRY}/g" ./kongstaging/stg/notification/notification-stg.yml
+    - sed -i "s#PLACEHOLDERTITLE#${CI_PROJECT_PATH}#g" ./kongstaging/stg/notification/notification-stg.yml
+    - sed -i "s#REQUESTED_CPU#10m#g" ./kongstaging/stg/notification/notification-stg.yml
+    - sed -i "s#REQUESTED_MEMORY#100Mi#g" ./kongstaging/stg/notification/notification-stg.yml
+    - sed -i "s#MAX_MEMORY#512Mi#g" ./kongstaging/stg/notification/notification-stg.yml
+    - git add . && git commit -m "updating notification staging $CI_COMMIT_SHORT_SHA" && git push git@gitlab.com:prod8/argoyaml.git
+
+deploy_prod:
+  stage: deploy
+  # tags:
+  #   - studio
+  # needs: [build_prod]
+  when: manual
+  only:
+    - main
+  image:
+    name: bitnami/git:2.30.1
+    entrypoint: [""]
+  before_script:
+    - mkdir argoclone && cd argoclone
+    - mkdir ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - chmod 0400 ~/.ssh/id_rsa
+    - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+    - ssh-agent bash -c 'git clone git@gitlab.com:${DEPLOY_REPO}'
+    #- git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/${DEPLOY_REPO}
+    - cd argoyaml && git checkout master
+    - git config --global user.name ${WAJ_USER}
+    - git config --global user.email ${WAJ_USER}
+  script:
+    - sed 's/PLACEHOLDERENV/prod/g' ../../k8.yml > ./kong_prod/notification/notification-prod.yml
+    - sed -i 's/REPLICAS/1/g' ./kong_prod/notification/notification-prod.yml
+    - sed -i "s/PLACEHOLDERIMG/$CI_COMMIT_REF_SLUG-${CI_COMMIT_SHORT_SHA}/g"  ./kong_prod/notification/notification-prod.yml
+    - sed -i "s/PLACEHOLDERREGISTRY/${CI_REGISTRY}/g" ./kong_prod/notification/notification-prod.yml
+    - sed -i "s#PLACEHOLDERTITLE#${CI_PROJECT_PATH}#g" ./kong_prod/notification/notification-prod.yml
+    - sed -i "s#REQUESTED_CPU#10m#g" ./kong_prod/notification/notification-prod.yml
+    - sed -i "s#REQUESTED_MEMORY#150Mi#g" ./kong_prod/notification/notification-prod.yml
+    - sed -i "s#MAX_MEMORY#512Mi#g" ./kong_prod/notification/notification-prod.yml
+    - git add . && git commit -m "updating notification prod" && git push git@gitlab.com:prod8/argoyaml.git

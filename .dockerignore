@@ -1,0 +1,11 @@
+.idea
+.env
+.env.example        
+node_modules
+deploy
+LICENSE
+README.md
+build/
+nodemon.json
+jest.config.js
+tests

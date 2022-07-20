@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: bulletproof-template
+  name: bulletproof-template-PLACEHOLDERENV
+  namespace: PLACEHOLDERENV
+spec:
+  ports:
+  - nodePort: 30750 
+    port: 3750 
+    targetPort: 3500
+  selector:
+    app: bulletproof-template-PLACEHOLDERENV
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # annotations:
+  #   deployment.kubernetes.io/revision: "3"
+  labels:
+    app: bulletproof-template-PLACEHOLDERENV
+    app.kubernetes.io/instance: bulletproof-template
+  name: bulletproof-template-PLACEHOLDERENV
+  namespace: PLACEHOLDERENV
+spec:
+  progressDeadlineSeconds: 600
+  replicas: REPLICAS
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: bulletproof-template-PLACEHOLDERENV
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: bulletproof-template-PLACEHOLDERENV
+    spec:
+      containers:
+      - image: PLACEHOLDERREGISTRY/PLACEHOLDERTITLE:PLACEHOLDERIMG
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - secretRef:
+            name: secret
+        name: bulletproof-template-PLACEHOLDERENV
+        ports:
+        - containerPort: 3500
+          protocol: TCP
+        resources:
+          limits:
+            memory: MAX_MEMORY #512Mi
+          requests:
+            cpu: REQUESTED_CPU #10m
+            memory: REQUESTED_MEMORY #100Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+      - name: gitlab-registry
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30
+---
