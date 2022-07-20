@@ -14,7 +14,7 @@ if(process.env.NODE_ENV === 'development'){
 export default {
    port: parseInt(process.env.PORT, 10),
 
-  databaseURL: process.env.CHARLIE,
+  databaseURL: process.env.DB_URL,
   progressToken: process.env.PROGRESS_TOKEN,
 
   jwtSecret: process.env.JWT_SECRET,
