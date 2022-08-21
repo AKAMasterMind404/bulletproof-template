@@ -16,6 +16,7 @@ export default {
 
   databaseURL: process.env.MONGODB_URI,
   progressToken: process.env.PROGRESS_TOKEN,
+  socketPort: process.env.SOCKET_PORT,
 
   jwtSecret: process.env.JWT_SECRET,
   jwtAlgorithm: process.env.JWT_ALGO,

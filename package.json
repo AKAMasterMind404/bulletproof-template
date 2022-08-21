@@ -65,6 +65,7 @@
     "node": "^17.7.2",
     "pdf-lib": "^1.16.0",
     "reflect-metadata": "^0.1.13",
+    "socket.io": "^4.5.1",
     "typedi": "^0.8.0",
     "winston": "^3.3.3"
   },

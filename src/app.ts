@@ -6,9 +6,11 @@ import express from 'express';
 
 import Logger from './loaders/logger';
 
+import socketLoader from "./loaders/socket";
+
 async function startServer() {
   const app = express();
-
+  const socket = socketLoader(app);
   /**
    * A little hack here
    * Import/Export can only be used in 'top-level code'
