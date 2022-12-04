@@ -188,9 +188,6 @@ class GenerateScripts:
                     _.write(line)
 
     def runAllScripts(self):
-        print(os.path.curdir);
-        while 1:1
-        return
         self.createInterface()
         self.createModel()
         self.registerModel()
